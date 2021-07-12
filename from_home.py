@@ -40,16 +40,18 @@ def process_journeys(possibilities):
         time_seconds_to_departure = time_delta_seconds(dt_from=time_now, dt_to=first.departure)
         time_minutes_to_departure = time_seconds_to_departure/60.0
 
-        print("In %5.1f min: %s -> %s (%s): %s" % (
-                time_minutes_to_departure,
-                first.departure.strftime('%H:%M'), 
-                last.arrival.strftime('%H:%M'), 
-                p.duration, 
-                "; ".join(route)
+        if time_seconds_to_departure >= -60:   # Allow showing too-late deps: Maybe we can run for it :)
+            print("In %5.1f min: %s -> %s (%s): %s" % (
+                    time_minutes_to_departure,
+                    first.departure.strftime('%H:%M'), 
+                    last.arrival.strftime('%H:%M'), 
+                    p.duration, 
+                    "; ".join(route)
+                )
             )
         )
 
-        list_seconds_until_dep += [time_seconds_to_departure]
+            list_seconds_until_dep += [time_seconds_to_departure]
 
     return list_seconds_until_dep
 
@@ -79,6 +81,7 @@ while True:
 
     # Process returned data and present it
     list_seconds_until_dep = process_journeys(possibilities)
+    list_seconds_until_dep = [ x for x in list_seconds_until_dep if x >= 0 ] 
 
     # We want to display up-to-date information without request-spamming.
     # I.e. we want to be nice towards rejseplanen but also accurate.
@@ -92,9 +95,10 @@ while True:
     # Should rejseplanen return a time waaay into the future incorrectly, let's not wait for that
     wait_until_next_query = min(wait_until_next_query, 1200)
     # Let us avoid spamming rejseplanen
-    wait_until_next_query = max(wait_until_next_query, 60)
+    wait_until_next_query = max(wait_until_next_query, 120)
     
     for i in range(0, int(wait_until_next_query)):
         time.sleep(1)
         process_journeys(possibilities)        
         print("Next update in", wait_until_next_query-i, "seconds", end='', flush=True)
+
