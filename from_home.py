@@ -13,6 +13,20 @@ lid_work = {
 }
 
 
+
+class atomic_printer(object):
+    """ Avoid terminal flickering: Collect print operations into one """
+    def __init__(self):
+        self.lines = []
+
+    def buf(self, txt):
+        self.lines += [txt]
+
+    def print_dump(self):
+        print("\033c" + "\n".join(self.lines), end="", flush=True)
+        self.lines = []
+
+
 def time_delta_seconds(dt_from, dt_to):
     """ If 'dt_fromm' is ahead of 'dt_to', timedelta will assume modulo 1 day; avoid that """
     if dt_to >= dt_from:
@@ -20,11 +34,11 @@ def time_delta_seconds(dt_from, dt_to):
     else:
         return -((dt_from - dt_to).seconds)
 
-def process_journeys(possibilities):
+def process_journeys(possibilities, aprint, max_journeys=3):
     time_now = datetime.datetime.now(pytz.timezone('Europe/Copenhagen'))
     list_seconds_until_dep = []
+    jnys = 0
 
-    print("\033c", end="")
     for p in possibilities:
         first = p.legs[0]
         last = p.legs[-1]
@@ -41,7 +55,10 @@ def process_journeys(possibilities):
         time_minutes_to_departure = time_seconds_to_departure/60.0
 
         if time_seconds_to_departure >= -60:   # Allow showing too-late deps: Maybe we can run for it :)
-            print("In %5.1f min: %s -> %s (%s): %s" % (
+            if jnys >= max_journeys:
+                break
+            jnys += 1
+            aprint.buf("In %5.1f min: %s -> %s (%s): %s" % (
                     time_minutes_to_departure,
                     first.departure.strftime('%H:%M'), 
                     last.arrival.strftime('%H:%M'), 
@@ -64,6 +81,7 @@ except Exception as e:
 
 
 client = HafasClient(RKRPProfile(), debug=True)
+aprint = atomic_printer()
 
 # Lookup once
 lid_home = client.locations(lid_home, rtype='ALL')[0].lid
@@ -80,8 +98,9 @@ while True:
     )
 
     # Process returned data and present it
-    list_seconds_until_dep = process_journeys(possibilities)
+    list_seconds_until_dep = process_journeys(possibilities, aprint)
     list_seconds_until_dep = [ x for x in list_seconds_until_dep if x >= 0 ] 
+    aprint.print_dump()
 
     # We want to display up-to-date information without request-spamming.
     # I.e. we want to be nice towards rejseplanen but also accurate.
@@ -99,6 +118,7 @@ while True:
     
     for i in range(0, int(wait_until_next_query)):
         time.sleep(1)
-        process_journeys(possibilities)        
-        print("Next update in", wait_until_next_query-i, "seconds", end='', flush=True)
+        process_journeys(possibilities, aprint)
+        aprint.buf("Next update in %i seconds" % int(wait_until_next_query-i))
+        aprint.print_dump()
 
