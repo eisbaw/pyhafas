@@ -6,10 +6,10 @@ import pytz
 from pyhafas import HafasClient
 from pyhafas.profile import RKRPProfile
 
-lid_home = 'A=2@O=Vejlegade 6, 2100 København Ø, Københavns Kommune@X=12585653@Y=55705245@U=103@L=901010791@B=1@p=1618386996@'
+lid_home = 'Strandboulevarden 95, 2100 København'
 lid_work = {
-    'Oticon'         : 'A=2@O=Kongebakken 9, 2765 Smørum, Egedal Kommune@X=12294403@Y=55749256@U=103@L=902400113@B=1@p=1618386996@',
-    'EuropeanEnergy' : 'A=2@O=Gyngemose Parkvej 50, 2860 Søborg, Gladsaxe Kommune@X=12475850@Y=55726414@U=103@L=901590083@B=1@p=1618386996@',
+    'Oticon'         : 'Kongebakken 9, 2765 Smørum',
+    'EuropeanEnergy' : 'Gyngemose Parkvej 50, 2860 Søborg',
 }
 
 
@@ -62,6 +62,10 @@ except Exception as e:
 
 
 client = HafasClient(RKRPProfile(), debug=True)
+
+# Lookup once
+lid_home = client.locations(lid_home, rtype='ALL')[0].lid
+lid_work_selected = client.locations(lid_work_selected, rtype='ALL')[0].lid
 
 while True:
     # Issue new request
