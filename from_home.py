@@ -66,7 +66,6 @@ def process_journeys(possibilities, aprint, max_journeys=3):
                     "; ".join(route)
                 )
             )
-        )
 
             list_seconds_until_dep += [time_seconds_to_departure]
 
